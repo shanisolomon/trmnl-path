@@ -1,0 +1,90 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hoboken Next Trains</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 1rem;
+    max-width: 600px;
+    margin: auto;
+    background: #f5f5f5;
+  }
+  h1 {
+    text-align: center;
+  }
+  .train {
+    background: white;
+    margin: 0.5rem 0;
+    padding: 1rem;
+    border-left: 8px solid;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+  }
+  .headsign {
+    font-weight: bold;
+    font-size: 1.1rem;
+  }
+  .arrival {
+    font-size: 0.9rem;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+  <h1>Next Available Trains - Hoboken</h1>
+  <div id="trainList">Loading train data...</div>
+
+<script>
+  async function fetchTrainData() {
+    try {
+      const res = await fetch('https://www.panynj.gov/bin/portauthority/ridepath.json');
+      if (!res.ok) throw new Error('Network response was not ok');
+      const data = await res.json();
+
+      // Find the "consideredStation" == "HOB"
+      const hobokenData = data.find(station => station.consideredStation === "HOB");
+      if (!hobokenData) {
+        document.getElementById('trainList').textContent = 'No data found for Hoboken station.';
+        return;
+      }
+
+      // Extract all messages from all destinations, flatten array
+      const allMessages = hobokenData.destinations.flatMap(dest => dest.messages);
+
+      // Sort by secondsToArrival ascending
+      allMessages.sort((a, b) => parseInt(a.secondsToArrival) - parseInt(b.secondsToArrival));
+
+      // Display trains
+      const container = document.getElementById('trainList');
+      container.innerHTML = ''; // Clear loading
+
+      allMessages.forEach(msg => {
+        const trainDiv = document.createElement('div');
+        trainDiv.className = 'train';
+        trainDiv.style.borderLeftColor = `#${msg.lineColor}`;
+
+        trainDiv.innerHTML = `
+          <div class="headsign">${msg.headSign}</div>
+          <div class="arrival">Arrives in: ${msg.arrivalTimeMessage}</div>
+          <div>Destination code: ${msg.target}</div>
+          <div style="font-size:0.8rem; color:#888;">Last updated: ${new Date(msg.lastUpdated).toLocaleTimeString()}</div>
+        `;
+
+        container.appendChild(trainDiv);
+      });
+
+    } catch (err) {
+      document.getElementById('trainList').textContent = 'Failed to fetch train data: ' + err.message;
+    }
+  }
+
+  fetchTrainData();
+  // Optional: Refresh every 30 seconds
+  setInterval(fetchTrainData, 30000);
+</script>
+</body>
+</html>
